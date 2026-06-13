@@ -32,6 +32,7 @@ jobs:
           mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/drawable
           mkdir -p app/src/main/res/mipmap-anydpi-v26
+          mkdir -p app/src/main/res/xml
           cp index.html app/src/main/assets/index.html
           cat > settings.gradle << 'EOF'
           pluginManagement {
@@ -67,6 +68,9 @@ jobs:
                   versionName "1.0"
               }
               buildTypes { release { minifyEnabled false } }
+              dependencies {
+                  implementation 'androidx.core:core:1.12.0'
+              }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
                   targetCompatibility JavaVersion.VERSION_17
@@ -88,6 +92,15 @@ jobs:
                           <category android:name="android.intent.category.LAUNCHER"/>
                       </intent-filter>
                   </activity>
+                  <provider
+                      android:name="androidx.core.content.FileProvider"
+                      android:authorities="com.bonsky.garage.fileprovider"
+                      android:exported="false"
+                      android:grantUriPermissions="true">
+                      <meta-data
+                          android:name="android.support.FILE_PROVIDER_PATHS"
+                          android:resource="@xml/file_paths"/>
+                  </provider>
               </application>
           </manifest>
           EOF
@@ -95,23 +108,95 @@ jobs:
           package com.bonsky.garage;
 
           import android.app.Activity;
+          import android.content.Intent;
+          import android.net.Uri;
           import android.os.Bundle;
+          import android.print.PrintManager;
+          import android.util.Base64;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.WebChromeClient;
           import android.webkit.WebView;
           import android.webkit.WebSettings;
+          import android.webkit.WebViewClient;
+          import androidx.core.content.FileProvider;
+          import java.io.File;
+          import java.io.FileOutputStream;
 
           public class MainActivity extends Activity {
               private WebView web;
-              @Override protected void onCreate(Bundle s) {
+
+              class BonskyInterface {
+                  @JavascriptInterface
+                  public void printPage() {
+                      runOnUiThread(new Runnable() {
+                          public void run() {
+                              PrintManager pm = (PrintManager) getSystemService(PRINT_SERVICE);
+                              if (pm != null) {
+                                  pm.print("Bonsky Garage",
+                                      web.createPrintDocumentAdapter("Bonsky Garage"), null);
+                              }
+                          }
+                      });
+                  }
+
+                  @JavascriptInterface
+                  public void shareText(final String text) {
+                      runOnUiThread(new Runnable() {
+                          public void run() {
+                              Intent i = new Intent(Intent.ACTION_SEND);
+                              i.setType("text/plain");
+                              i.putExtra(Intent.EXTRA_TEXT, text);
+                              startActivity(Intent.createChooser(i, "Bagikan via"));
+                          }
+                      });
+                  }
+
+                  @JavascriptInterface
+                  public void openPDF(final String dataUri, final String filename) {
+                      runOnUiThread(new Runnable() {
+                          public void run() {
+                              try {
+                                  String base64 = dataUri.replaceAll("^data:application/pdf;base64,", "");
+                                  byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
+                                  File file = new File(getCacheDir(), filename);
+                                  FileOutputStream fos = new FileOutputStream(file);
+                                  fos.write(bytes);
+                                  fos.close();
+                                  Uri uri = FileProvider.getUriForFile(
+                                      MainActivity.this,
+                                      "com.bonsky.garage.fileprovider",
+                                      file);
+                                  Intent i = new Intent(Intent.ACTION_SEND);
+                                  i.setType("application/pdf");
+                                  i.putExtra(Intent.EXTRA_STREAM, uri);
+                                  i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                  startActivity(Intent.createChooser(i, "Bagikan PDF via"));
+                              } catch (Exception e) {
+                                  e.printStackTrace();
+                              }
+                          }
+                      });
+                  }
+              }
+
+              @Override
+              protected void onCreate(Bundle s) {
                   super.onCreate(s);
                   web = new WebView(this);
                   WebSettings set = web.getSettings();
                   set.setJavaScriptEnabled(true);
                   set.setDomStorageEnabled(true);
+                  web.setWebChromeClient(new WebChromeClient());
+                  web.setWebViewClient(new WebViewClient());
+                  web.addJavascriptInterface(new BonskyInterface(), "Android");
                   web.loadUrl("file:///android_asset/index.html");
                   setContentView(web);
               }
-              @Override public void onBackPressed() {
-                  if (web.canGoBack()) web.goBack(); else super.onBackPressed();
+
+              @Override
+              public void onBackPressed() {
+                  if (web.canGoBack()) web.goBack();
+                  else super.onBackPressed();
               }
           }
           EOF
@@ -145,6 +230,13 @@ jobs:
           </adaptive-icon>
           EOF
           cp app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+
+          cat > app/src/main/res/xml/file_paths.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <paths>
+              <cache-path name="cache" path="." />
+          </paths>
+          EOF
 
       - name: Generate Gradle wrapper
         run: gradle wrapper --gradle-version 8.7
