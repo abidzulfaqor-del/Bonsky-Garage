@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bonsky Garage — Engine Tools</title>
+<style>
+  :root{
+    --bg:#15181b;--panel:#1e2329;--panel-2:#252b32;--line:#323a42;
+    --amber:#f5a623;--amber-dim:#9c6f23;--intake:#4ea1ff;--exhaust:#ff5e57;
+    --ok:#5fb87a;--ink:#f2f4f5;--muted:#8693a0;
+    --sans:'Arial Narrow','Helvetica Neue',Arial,system-ui,sans-serif;
+    --mono:ui-monospace,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace;
+  }
+  body.light{
+    --bg:#eef1f4;--panel:#ffffff;--panel-2:#f3f5f7;--line:#d4dae0;
+    --ink:#1a1d21;--muted:#5d6b78;
+    --amber-dim:#d9920f;
+  }
+  body.light .brand{background:repeating-linear-gradient(135deg,#1a1d21 0 14px,#23272c 14px 28px)}
+  body.light .brand h1{color:#fff}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.4;padding:18px 14px 150px;max-width:560px;margin:0 auto}
+
+  .head{margin-bottom:18px}
+  .brand{position:relative;background:repeating-linear-gradient(135deg,#1a1d21 0 14px,#202428 14px 28px);border:1px solid var(--line);border-radius:12px;padding:20px 20px 18px;overflow:hidden}
+  .brand::before{content:"";position:absolute;top:0;left:0;right:0;height:6px;background:repeating-linear-gradient(135deg,var(--amber) 0 16px,#15181b 16px 26px)}
+  .marque{display:flex;align-items:center;gap:12px;margin-top:6px}
+  .gear{flex:none;width:42px;height:42px;color:var(--amber);filter:drop-shadow(0 0 6px rgba(245,166,35,.35))}
+  .brand h1{font-family:var(--sans);font-weight:800;font-style:italic;font-size:48px;line-height:.9;letter-spacing:1px;text-transform:uppercase;color:var(--ink);text-shadow:0 2px 0 rgba(0,0,0,.4)}
+  .brand h1 b{color:var(--amber)}
+  .brand .tag{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);font-weight:700;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .theme-toggle{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;background:rgba(245,166,35,.15);border:1px solid var(--amber-dim);color:var(--amber);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2}
+
+  .bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;max-width:560px;margin:0 auto;background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -4px 16px rgba(0,0,0,.35)}
+  .navbtn{flex:1;background:none;border:none;cursor:pointer;padding:9px 2px calc(9px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);font-family:inherit;position:relative}
+  .navbtn svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .navbtn span{font-size:10.5px;font-weight:700;letter-spacing:.2px}
+  .navbtn.active{color:var(--amber)}
+  .navbtn.active::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:34px;height:3px;border-radius:0 0 3px 3px;background:var(--amber)}
+  .page{display:none;animation:fadein .22s ease}
+  .page.active{display:block}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .group{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+  .group-title{display:flex;align-items:center;gap:8px;font-size:13px;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:14px;color:var(--muted)}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .dot.in{background:var(--intake)} .dot.ex{background:var(--exhaust)}
+  .field{margin-bottom:12px}
+  .field:last-child{margin-bottom:0}
+  label{display:block;font-size:15px;color:var(--ink);margin-bottom:6px}
+  label .hint{color:var(--muted);font-size:12px;font-weight:400}
+  .inp{display:flex;align-items:center;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .inp:focus-within{border-color:var(--amber)}
+  input{flex:1;width:100%;background:transparent;border:none;outline:none;color:var(--ink);font-family:var(--mono);font-size:20px;font-weight:700;padding:11px 14px;-moz-appearance:textfield}
+  input[type=text]{font-family:var(--sans);font-size:18px}
+  input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .unit{padding:0 13px;color:var(--muted);font-family:var(--mono);font-size:13px;white-space:nowrap}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+  .readouts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .ro{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .ro.full{grid-column:1 / -1}
+  .ro .k{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+  .ro .v{font-family:var(--mono);font-weight:700;font-size:28px;margin-top:4px}
+  .ro .v .deg{font-size:15px;color:var(--muted)}
+  .ro.hero{background:linear-gradient(160deg,#2a2118,#1e2329);border-color:var(--amber-dim);box-shadow:0 2px 12px rgba(245,166,35,.08)}
+  .ro.hero .k{color:var(--amber)}
+  .ro.hero .v{color:var(--amber);font-size:46px;line-height:1;letter-spacing:-1px}
+  .ro.hero .v .deg{font-size:20px}
+  .v{transition:color .15s}
+  @keyframes flash{0%{color:#fff}100%{}}
+  .v.changed{animation:flash .4s ease}
+  .v.in{color:var(--intake)} .v.ex{color:var(--exhaust)}
+  .verdict{margin-top:4px;font-size:13px;color:var(--muted)}
+  .verdict b{color:var(--ink)}
+  .badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.5px;padding:2px 8px;border-radius:5px;margin-left:6px;vertical-align:middle}
+  .badge.ok{background:rgba(95,184,122,.15);color:var(--ok)}
+  .badge.warn{background:rgba(245,166,35,.15);color:var(--amber)}
+
+  .wheel-wrap{display:flex;justify-content:center;margin:6px 0 12px}
+  svg.wheel{width:100%;max-width:300px;height:auto}
+  .legend{display:flex;gap:18px;justify-content:center;font-size:13px;flex-wrap:wrap;margin-bottom:6px}
+  .legend span{display:flex;align-items:center;gap:6px;color:var(--muted)}
+
+  .note{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.5}
+  .note b{color:var(--ink)}
+  .warn-box{display:none;background:rgba(255,94,87,.12);border:1px solid var(--exhaust);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--ink);line-height:1.5}
+  .warn-box.show{display:block}
+  .warn-box .wt{font-weight:700;color:var(--exhaust);display:block;margin-bottom:3px}
+  .warn-box ul{margin:0;padding-left:18px}
+
+  .btnrow{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  .btn{flex:1;min-width:130px;border:none;border-radius:8px;padding:13px;font-family:inherit;font-size:16px;font-weight:700;letter-spacing:.5px;cursor:pointer}
+  .btn.primary{background:var(--amber);color:#15181b}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.ghost{background:var(--panel-2);color:var(--ink);border:1px solid var(--line)}
+
+  .saved{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:10px}
+  .saved .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .saved .name{font-size:18px;font-weight:700}
+  .saved .date{font-size:12px;color:var(--muted)}
+  .saved .specs{display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;font-family:var(--mono);font-size:13px}
+  .saved .specs em{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11px;display:block;text-transform:uppercase;letter-spacing:1px}
+  .del{background:none;border:1px solid var(--line);color:var(--exhaust);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+  .saved{cursor:pointer;transition:border-color .15s}
+  .saved:active{border-color:var(--amber)}
+  .tap-hint{margin-top:10px;font-size:12px;color:var(--amber);font-weight:600;letter-spacing:.3px}
+  .cmp-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .cmp-toggle{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:9px 14px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}
+  .cmp-toggle.active{background:var(--amber);color:#15181b;border-color:var(--amber)}
+  .cmp-hint{font-size:12px;color:var(--muted);flex:1}
+  .cmp-go{background:var(--amber);color:#15181b;border:none;border-radius:8px;padding:9px 16px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;opacity:.4;pointer-events:none}
+  .cmp-go.ready{opacity:1;pointer-events:auto}
+  .saved.selectable{padding-left:44px;position:relative}
+  .saved .chk{display:none;position:absolute;left:14px;top:50%;transform:translateY(-50%);width:22px;height:22px;border:2px solid var(--line);border-radius:6px}
+  .saved.selectable .chk{display:block}
+  .saved.picked{border-color:var(--amber)}
+  .saved.picked .chk{background:var(--amber);border-color:var(--amber)}
+  .saved.picked .chk::after{content:'\2713';position:absolute;color:#15181b;font-weight:700;font-size:15px;left:3px;top:-2px}
+  .cmp-result{overflow-x:auto}
+  .cmp-table{width:100%;border-collapse:collapse;font-size:13px}
+  .cmp-table th,.cmp-table td{padding:8px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+  .cmp-table th:first-child,.cmp-table td:first-child{text-align:left;color:var(--muted)}
+  .cmp-table thead th{color:var(--ink);font-weight:700;font-family:var(--sans)}
+  .cmp-table td{font-family:var(--mono)}
+  .cmp-table .sec{color:var(--amber);font-weight:700;font-family:var(--sans);text-align:left;padding-top:12px}
+  .cmp-up{color:var(--ok)} .cmp-dn{color:var(--exhaust)} .cmp-eq{color:var(--muted)}
+  .empty{text-align:center;color:var(--muted);padding:30px 10px;font-size:14px}
+
+  /* search */
+  .search-wrap{display:flex;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:0 12px;margin-bottom:8px}
+  .search-wrap:focus-within{border-color:var(--amber)}
+  .search-ico{color:var(--muted);font-size:15px}
+  .search-wrap input{flex:1;background:transparent;border:none;outline:none;color:var(--ink);font-family:var(--sans);font-size:16px;padding:12px 10px}
+  .search-clear{background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;padding:0 4px;line-height:1}
+  .search-count{font-size:12px;color:var(--muted);margin-bottom:10px;padding-left:2px}
+
+  .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:24px;border-top:1px solid var(--line);padding-top:16px}
+  .print-header{display:none;font-size:22px;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #f5a623}
+  .print-header span{color:#f5a623}
+
+  /* modal ringkasan */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:flex-end;justify-content:center}
+  .modal-bg.show{display:flex}
+  .modal{background:var(--panel);border-radius:14px 14px 0 0;width:100%;max-width:560px;padding:20px 16px 30px;max-height:85vh;display:flex;flex-direction:column;gap:12px}
+  .modal-head{display:flex;justify-content:space-between;align-items:center}
+  .modal-head .t{font-size:18px;font-weight:700}
+  .modal-close{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 14px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}
+  .modal textarea{flex:1;min-height:200px;resize:none;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:var(--mono);font-size:13px;line-height:1.6;padding:12px;outline:none}
+  .modal-actions{display:flex;gap:8px}
+  .modal-actions button{flex:1;background:var(--amber);color:#15181b;border:none;border-radius:8px;padding:13px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer}
+  .modal-actions button.ghost{background:var(--panel-2);color:var(--ink);border:1px solid var(--line)}
+  .modal-actions button.btn-danger{background:var(--exhaust);color:#fff}
+  .ed-lab{font-size:13px;color:var(--muted);font-weight:600;margin-top:4px}
+  .ed-inp{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:var(--sans);font-size:17px;padding:11px 14px;outline:none}
+  .ed-inp:focus{border-color:var(--amber)}
+  .ed-area{min-height:120px;resize:vertical;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;padding:12px;outline:none}
+  .ed-area:focus{border-color:var(--amber)}
+  .confirm-msg{font-size:15px;color:var(--ink);line-height:1.5}
+  .card-btns{display:flex;gap:6px}
+  .edit{background:none;border:1px solid var(--line);color:var(--amber);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+
+  /* notes drawer - tampil di semua tab */
+  .notes-drawer{position:fixed;left:0;right:0;bottom:64px;z-index:55;max-width:560px;margin:0 auto;background:var(--panel);border-top:2px solid var(--amber);box-shadow:0 -6px 20px rgba(0,0,0,.45)}
+  .notes-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;user-select:none}
+  .notes-head .t{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;letter-spacing:.5px}
+  .notes-head .pin{color:var(--amber)}
+  .notes-head .meta{font-size:12px;color:var(--muted);font-weight:400}
+  .notes-head .chev{color:var(--muted);transition:transform .2s}
+  .notes-drawer.open .notes-head .chev{transform:rotate(180deg)}
+  .notes-body{display:none;padding:0 16px 16px}
+  .notes-drawer.open .notes-body{display:block}
+  .notes-body textarea{width:100%;min-height:130px;resize:vertical;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.5;padding:12px;outline:none}
+  .notes-body textarea:focus{border-color:var(--amber)}
+  .notes-actions{display:flex;gap:8px;margin-top:8px}
+  .notes-actions button{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:10px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}
+
+  @media print{
+    .notes-drawer{position:static;box-shadow:none;border-top:1px solid var(--line);margin-top:16px}
+    .notes-body{display:block!important}
+    .notes-actions,.bottomnav,.btnrow,.foot{display:none!important}
+    .page{display:none!important}
+    .page.active{display:block!important}
+    .group,.ro,.saved{break-inside:avoid}
+    body{padding:0;max-width:none;background:#fff;color:#000}
+    .print-header{display:block!important}
+    .ro,.group{background:#f5f5f5!important;border:1px solid #ccc!important}
+    .ro .v{color:#000!important}
+    .ro.hero{background:#ffe8b0!important}
+    .ro .k{color:#555!important}
+    .tabs,.btnrow,.foot{display:none!important}
+    .page{display:none!important}
+    .page.active{display:block!important}
+    .group,.ro,.saved{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <div class="brand">
+    <div class="marque">
+      <svg class="gear" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.488.488 0 0 0 13.6 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5z"/>
+      </svg>
+      <h1>Bonsky<br><b>Garage</b></h1>
+    </div>
+    <div class="tag">Performance &middot; Tuning &middot; Engine Builder</div>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Ganti tema">&#9728;</button>
+  </div>
+</div>
+
+<nav class="bottomnav">
+  <button class="navbtn active" data-tab="cam">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+    <span>Noken As</span>
+  </button>
+  <button class="navbtn" data-tab="reverse">
+    <svg viewBox="0 0 24 24"><path d="M3 12h14M11 6l6 6-6 6"/><path d="M21 5v14"/></svg>
+    <span>Mundur</span>
+  </button>
+  <button class="navbtn" data-tab="lift">
+    <svg viewBox="0 0 24 24"><path d="M4 17l5-5-5-5M11 17l5-5-5-5"/><path d="M18 7v10"/></svg>
+    <span>Konverter</span>
+  </button>
+  <button class="navbtn" data-tab="engine">
+    <svg viewBox="0 0 24 24"><path d="M5 9h3l2-2h4l2 2h3v6h-3l-2 2h-4l-2-2H5z"/><circle cx="12" cy="12" r="2"/></svg>
+    <span>Mesin</span>
+  </button>
+  <button class="navbtn" data-tab="saved">
+    <svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M9 4v5h6"/><path d="M9 14h6M9 17h4"/></svg>
+    <span>History</span>
+  </button>
+</nav>
+
+<div class="page active" id="page-cam">
+  <div class="print-header">BONSKY <span>GARAGE</span> &mdash; Laporan Timing Noken As</div>
+  <div class="group">
+    <div class="group-title">Data Pelanggan</div>
+    <div class="field"><label>Nama / Motor</label><div class="inp"><input type="text" id="custName" placeholder="cth: Beat Bore Up - Dimas"></div></div>
+    <div class="field"><label>Tanggal</label><div class="inp"><input type="text" id="custDate"></div></div>
+  </div>
+
+  <div class="group">
+    <div class="group-title"><span class="dot in"></span> Klep Masuk (Intake)</div>
+    <div class="field"><label>Buka <span class="hint">- sebelum TMA (BTDC)</span></label><div class="inp"><input type="text" id="inOpen" value="21" inputmode="decimal"><span class="unit">&deg;</span></div></div>
+    <div class="field"><label>Tutup <span class="hint">- setelah TMB (ABDC)</span></label><div class="inp"><input type="text" id="inClose" value="52" inputmode="decimal"><span class="unit">&deg;</span></div></div>
+  </div>
+
+  <div class="group">
+    <div class="group-title"><span class="dot ex"></span> Klep Buang (Exhaust)</div>
+    <div class="field"><label>Buka <span class="hint">- sebelum TMB (BBDC)</span></label><div class="inp"><input type="text" id="exOpen" value="52" inputmode="decimal"><span class="unit">&deg;</span></div></div>
+    <div class="field"><label>Tutup <span class="hint">- setelah TMA (ATDC)</span></label><div class="inp"><input type="text" id="exClose" value="21" inputmode="decimal"><span class="unit">&deg;</span></div></div>
+  </div>
+
+  <div class="group">
+    <div class="group-title">Pasang Cam - Maju / Mundur</div>
+    <div class="field">
+      <label>Geser cam <span class="hint">- (+) maju / advance, (-) mundur / retard</span></label>
+      <div class="inp"><input type="text" id="adv" value="0" inputmode="decimal"><span class="unit">&deg; cam</span></div>
+    </div>
+    <div class="note" id="advNote"></div>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot in"></span> Intake terbuka</span>
+    <span><span class="dot ex"></span> Exhaust terbuka</span>
+  </div>
+  <div class="wheel-wrap">
+    <svg class="wheel" viewBox="0 0 300 300" aria-label="Diagram timing klep">
+      <circle cx="150" cy="150" r="120" fill="none" stroke="var(--line)" stroke-width="14" opacity="0.5"/>
+      <circle cx="150" cy="150" r="120" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+      <!-- garis TMA/TMB tegas -->
+      <line x1="150" y1="22" x2="150" y2="150" stroke="#6b7682" stroke-width="1.5" stroke-dasharray="3 4"/>
+      <line x1="150" y1="150" x2="150" y2="278" stroke="#6b7682" stroke-width="1.5" stroke-dasharray="3 4"/>
+      <circle cx="150" cy="150" r="3" fill="#6b7682"/>
+      <rect x="128" y="6" width="44" height="17" rx="4" fill="var(--panel-2)" stroke="var(--line)"/>
+      <text x="150" y="18" text-anchor="middle" fill="var(--ink)" font-size="11" font-weight="700" font-family="monospace">TMA</text>
+      <rect x="128" y="277" width="44" height="17" rx="4" fill="var(--panel-2)" stroke="var(--line)"/>
+      <text x="150" y="289" text-anchor="middle" fill="var(--ink)" font-size="11" font-weight="700" font-family="monospace">TMB</text>
+      <!-- arcs -->
+      <path id="arcIn" fill="none" stroke="#4ea1ff" stroke-width="10" stroke-linecap="round"/>
+      <path id="arcEx" fill="none" stroke="#ff5e57" stroke-width="10" stroke-linecap="round"/>
+      <!-- label ujung arc -->
+      <text id="lblInO" fill="#4ea1ff" font-size="10" font-weight="700" font-family="monospace" text-anchor="middle"></text>
+      <text id="lblInC" fill="#4ea1ff" font-size="10" font-weight="700" font-family="monospace" text-anchor="middle"></text>
+      <text id="lblExO" fill="#ff5e57" font-size="10" font-weight="700" font-family="monospace" text-anchor="middle"></text>
+      <text id="lblExC" fill="#ff5e57" font-size="10" font-weight="700" font-family="monospace" text-anchor="middle"></text>
+      <!-- pusat overlap -->
+      <text id="wOverlap" x="150" y="150" text-anchor="middle" fill="var(--amber)" font-size="34" font-weight="700" font-family="monospace">42&deg;</text>
+      <text x="150" y="170" text-anchor="middle" fill="var(--muted)" font-size="11" letter-spacing="2" font-family="sans-serif">OVERLAP</text>
+    </svg>
+  </div>
+
+  <div class="readouts">
+    <div class="ro"><div class="k">Durasi Intake</div><div class="v in" id="durIn">253<span class="deg">&deg;</span></div></div>
+    <div class="ro"><div class="k">Durasi Exhaust</div><div class="v ex" id="durEx">253<span class="deg">&deg;</span></div></div>
+    <div class="ro"><div class="k">Lobe Center IN</div><div class="v" id="lcIn">105<span class="deg">&deg;</span></div></div>
+    <div class="ro"><div class="k">Lobe Center EX</div><div class="v" id="lcEx">105<span class="deg">&deg;</span></div></div>
+    <div class="ro hero full"><div class="k">LSA - Lobe Separation Angle</div><div class="v" id="lsa">105<span class="deg">&deg;</span></div><div class="verdict" id="lsaVerdict"></div></div>
+    <div class="ro full"><div class="k">Overlap</div><div class="v" id="overlap">42<span class="deg">&deg;</span></div><div class="verdict" id="ovVerdict"></div></div>
+  </div>
+  <div class="note" id="durNote"></div>
+  <div class="warn-box" id="warnBox"></div>
+
+  <div class="btnrow">
+    <button class="btn primary" id="saveBtn">&#128190; Simpan Spek</button>
+    <button class="btn ghost" id="pdfBtn" onclick="generatePDF()">&#128438; Download PDF</button>
+    <button class="btn ghost" id="shareBtn" onclick="doShare()">&#128257; Bagikan</button>
+  </div>
+</div>
+
+<div class="page" id="page-reverse">
+  <div class="group">
+    <div class="group-title">Target Spek &rarr; Sudut Dial</div>
+    <div class="note" style="margin-bottom:14px">Tentukan durasi &amp; LSA yang kamu mau, alat ini hitung patokan sudut buka-tutup klep buat dicapai saat men-dial. Asumsi cam dipasang lurus (ICL = ECL = LSA).</div>
+    <div class="row2">
+      <div class="field"><label>Durasi IN</label><div class="inp"><input type="text" id="rDurIn" value="253" inputmode="decimal"><span class="unit">&deg;</span></div></div>
+      <div class="field"><label>Durasi EX</label><div class="inp"><input type="text" id="rDurEx" value="253" inputmode="decimal"><span class="unit">&deg;</span></div></div>
+    </div>
+    <div class="field"><label>LSA target</label><div class="inp"><input type="text" id="rLsa" value="105" inputmode="decimal"><span class="unit">&deg;</span></div></div>
+  </div>
+  <div class="readouts">
+    <div class="ro"><div class="k">IN Buka (BTDC)</div><div class="v in" id="rInOpen">-</div></div>
+    <div class="ro"><div class="k">IN Tutup (ABDC)</div><div class="v in" id="rInClose">-</div></div>
+    <div class="ro"><div class="k">EX Buka (BBDC)</div><div class="v ex" id="rExOpen">-</div></div>
+    <div class="ro"><div class="k">EX Tutup (ATDC)</div><div class="v ex" id="rExClose">-</div></div>
+    <div class="ro full"><div class="k">Overlap hasil</div><div class="v" id="rOverlap">-</div></div>
+  </div>
+  <div class="warn-box" id="warnReverse"></div>
+  <div class="note">Pakai angka ini sebagai patokan: setel cam sampai dial menunjukkan klep buka/tutup pada derajat tersebut.</div>
+</div>
+
+<div class="page" id="page-lift">
+  <div class="group">
+    <div class="group-title">Konverter Durasi (Patokan Lift Kem)</div>
+    <div class="note" style="margin-bottom:14px">Durasi kem diukur pada <b>lift kem/tappet</b> tertentu &mdash; bukan lift di klep. Patokan lift kecil (advertised, ~0,15&nbsp;mm) menghasilkan durasi lebih besar; patokan lift besar (~1,27&nbsp;mm / 0,050") menghasilkan durasi lebih kecil. Alat ini <b>perkiraan</b> untuk menyamakan angka antar patokan. Selisih nyata tergantung profil lobe &mdash; atur sendiri kalau punya datanya.</div>
+    <div class="field"><label>Durasi pada lift kecil <span class="hint">- advertised (~0,15 mm)</span></label><div class="inp"><input type="text" id="dur010" value="280" inputmode="decimal"><span class="unit">&deg;</span></div></div>
+    <div class="field"><label>Selisih perkiraan <span class="hint">- umum 25-35&deg;</span></label><div class="inp"><input type="text" id="liftDelta" value="30" inputmode="decimal"><span class="unit">&deg;</span></div></div>
+  </div>
+  <div class="readouts">
+    <div class="ro hero full"><div class="k">&asymp; Durasi pada lift besar (~1,27 mm)</div><div class="v" id="dur1mm">250<span class="deg">&deg;</span></div></div>
+  </div>
+  <div class="warn-box" id="warnLift"></div>
+  <div class="note">Rumus: durasi lift besar &asymp; durasi lift kecil &minus; selisih. Patokan lift besar (mis. 0,050" / 1,27&nbsp;mm) dipakai karena lebih presisi &amp; konsisten saat membandingkan kem antar produsen.</div>
+</div>
+
+<div class="page" id="page-engine">
+  <div class="group">
+    <div class="group-title">Kapasitas Mesin (cc)</div>
+    <div class="row2">
+      <div class="field"><label>Diameter piston (bore)</label><div class="inp"><input type="text" id="bore" value="53" inputmode="decimal"><span class="unit">mm</span></div></div>
+      <div class="field"><label>Langkah (stroke)</label><div class="inp"><input type="text" id="stroke" value="55.1" inputmode="decimal"><span class="unit">mm</span></div></div>
+    </div>
+    <div class="field"><label>Jumlah silinder</label><div class="inp"><input type="text" id="cyl" value="1" inputmode="decimal"><span class="unit">silinder</span></div></div>
+  </div>
+  <div class="readouts">
+    <div class="ro hero full"><div class="k">Kapasitas Total</div><div class="v" id="cc">-</div></div>
+    <div class="ro full"><div class="k">Volume per silinder (Vd)</div><div class="v" id="vd" style="font-size:24px">-</div></div>
+  </div>
+
+  <div class="group" style="margin-top:14px">
+    <div class="group-title">Rasio Kompresi Statis (SCR)</div>
+    <div class="field"><label>Volume ruang bakar (Vc) <span class="hint">- total head + paking + coakan</span></label><div class="inp"><input type="text" id="vc" value="12" inputmode="decimal"><span class="unit">cc</span></div></div>
+  </div>
+  <div class="readouts">
+    <div class="ro hero full"><div class="k">Rasio Kompresi Statis</div><div class="v" id="cr">-</div><div class="verdict" id="crVerdict"></div></div>
+  </div>
+
+  <div class="group" style="margin-top:14px">
+    <div class="group-title">Rasio Kompresi Dinamis (DCR)</div>
+    <div class="note" style="margin-bottom:14px">Kompresi efektif yang dihitung sejak klep masuk benar-benar menutup (ABDC), bukan dari TMB. Lebih mewakili karakter mesin &amp; kebutuhan oktan sebenarnya.</div>
+    <div class="row2">
+      <div class="field"><label>Panjang stang piston</label><div class="inp"><input type="text" id="rodLen" value="90" inputmode="decimal"><span class="unit">mm</span></div></div>
+      <div class="field"><label>Klep masuk tutup <span class="hint">(ABDC)</span></label><div class="inp"><input type="text" id="ivc" value="52" inputmode="decimal"><span class="unit">&deg;</span></div></div>
+    </div>
+  </div>
+  <div class="readouts">
+    <div class="ro hero full"><div class="k">Rasio Kompresi Dinamis</div><div class="v" id="dcr">-</div><div class="verdict" id="dcrVerdict"></div></div>
+  </div>
+  <div class="warn-box" id="warnEngine"></div>
+
+  <div class="group" style="margin-top:14px">
+    <div class="group-title">Bantu: Vc untuk Target Kompresi</div>
+    <div class="field"><label>Target rasio kompresi</label><div class="inp"><input type="text" id="targetCr" value="11.5" inputmode="decimal"><span class="unit">: 1</span></div></div>
+  </div>
+  <div class="readouts">
+    <div class="ro hero full"><div class="k">Vc yang dibutuhkan</div><div class="v" id="needVc">-</div></div>
+  </div>
+  <div class="note">CR = (Vd + Vc) &divide; Vc. Buat capai target kompresi, sesuaikan Vc lewat papas head, ganti paking, atau ubah dome/coakan piston.</div>
+</div>
+
+<div class="page" id="page-saved">
+  <div class="search-wrap">
+    <span class="search-ico">&#128269;</span>
+    <input type="text" id="searchBox" placeholder="Cari nama motor / pelanggan...">
+    <button class="search-clear" id="searchClear" onclick="clearSearch()" style="display:none">&times;</button>
+  </div>
+  <div class="cmp-bar">
+    <button class="cmp-toggle" id="cmpToggle" onclick="toggleCompare()">&#8646; Bandingkan</button>
+    <span class="cmp-hint" id="cmpHint" style="display:none">Pilih 2 spek lalu tap Tampilkan</span>
+    <button class="cmp-go" id="cmpGo" onclick="showCompare()" style="display:none">Tampilkan</button>
+  </div>
+  <div class="search-count" id="searchCount"></div>
+  <div id="savedList"></div>
+</div>
+
+<div class="modal-bg" id="cmpBg">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="t">Perbandingan Spek</div>
+      <button class="modal-close" onclick="closeCompare()">Tutup</button>
+    </div>
+    <div id="cmpResult" class="cmp-result"></div>
+    <div class="modal-actions">
+      <button id="cmpCopyBtn" onclick="cmpCopy()">&#128203; Salin</button>
+    </div>
+  </div>
+</div>
+
+<div class="foot">Bonsky Garage &middot; Patokan derajat = putaran kruk as &middot; Selalu cek clearance klep-piston sebelum start</div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="t" id="modalTitle">Ringkasan</div>
+      <button class="modal-close" onclick="closeModal()">Tutup</button>
+    </div>
+    <textarea id="modalText" readonly></textarea>
+    <div class="modal-actions">
+      <button id="modalLoadBtn" onclick="loadSaved()" style="display:none">&#11015; Muat ke Kalkulator</button>
+      <button id="modalCopyBtn" onclick="modalCopy()">&#128203; Salin Teks</button>
+      <button class="ghost" id="modalPrintBtn" onclick="modalPrint()" style="display:none">&#128438; Print PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="editBg">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="t">Edit Spek</div>
+      <button class="modal-close" onclick="closeEdit()">Tutup</button>
+    </div>
+    <label class="ed-lab">Nama / Motor</label>
+    <input type="text" id="editName" class="ed-inp" placeholder="Nama motor / pelanggan">
+    <label class="ed-lab">Catatan</label>
+    <textarea id="editNotes" class="ed-area" placeholder="Catatan untuk spek ini..."></textarea>
+    <div class="modal-actions">
+      <button onclick="saveEdit()">&#128190; Simpan Perubahan</button>
+      <button class="ghost" onclick="closeEdit()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="confirmBg">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="t">Hapus Spek?</div>
+    </div>
+    <div id="confirmMsg" class="confirm-msg"></div>
+    <div class="modal-actions">
+      <button id="confirmYes" class="btn-danger">&#128465; Ya, Hapus</button>
+      <button class="ghost" onclick="closeConfirm()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div class="notes-drawer" id="notesDrawer">
+  <div class="notes-head" id="notesHead">
+    <div class="t"><span class="pin">&#9998;</span> Catatan <span class="meta" id="notesMeta"></span></div>
+    <span class="chev">&#9650;</span>
+  </div>
+  <div class="notes-body">
+    <textarea id="notesText" placeholder="Catat hasil ukur, keluhan motor, part yang diganti... tetap tersimpan saat pindah tab."></textarea>
+    <div class="notes-actions">
+      <button id="notesCopy">Salin</button>
+      <button id="notesClear">Bersihkan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const el=id=>document.getElementById(id);
+  const num=id=>{const v=parseFloat(String(el(id).value).replace(',','.'));return isNaN(v)?0:v;};
+  const f=n=>{if(!isFinite(n))return '-';return Number.isInteger(n)?n:Math.round(n*10)/10;};
+  const deg=n=>f(n)+'<span class="deg">&deg;</span>';
+  function pulse(id){const e=el(id);if(!e)return;e.classList.remove('changed');void e.offsetWidth;e.classList.add('changed');}
+
+  /* storage: localStorage (permanen di APK/browser), fallback memori (sandbox) */
+  let editingId=null;
+  const LS_OK=(function(){try{const k='__bg_test';localStorage.setItem(k,'1');localStorage.removeItem(k);return true;}catch(e){return false;}})();
+  let _mem={cams:[],form:{},notes:'',theme:''};
+  function store_get(key,def){
+    if(LS_OK){try{const v=localStorage.getItem('bg_'+key);return v===null?def:JSON.parse(v);}catch(e){return def;}}
+    return _mem[key]!==undefined?_mem[key]:def;
+  }
+  function store_set(key,val){
+    if(LS_OK){try{localStorage.setItem('bg_'+key,JSON.stringify(val));}catch(e){}}
+    else{_mem[key]=val;}
+  }
+  let cams=store_get('cams',[]);
+  function saveCams(){store_set('cams',cams);}
+  const FORM_FIELDS=['custName','custDate','inOpen','inClose','exOpen','exClose','adv','rDurIn','rDurEx','rLsa','dur010','liftDelta','bore','stroke','cyl','vc','rodLen','ivc','targetCr'];
+  function saveForm(){
+    const o={};FORM_FIELDS.forEach(k=>{if(el(k))o[k]=el(k).value;});
+    o.__notes=el('notesText')?el('notesText').value:'';
+    store_set('form',o);
+  }
+  function restoreForm(){
+    const o=store_get('form',null);if(!o)return;
+    FORM_FIELDS.forEach(k=>{if(el(k)&&o[k]!==undefined&&o[k]!=='')el(k).value=o[k];});
+    if(el('notesText')&&o.__notes!==undefined)el('notesText').value=o.__notes;
+  }
+
+  document.querySelectorAll('.navbtn').forEach(t=>{
+    t.addEventListener('click',()=>{
+      document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      el('page-'+t.dataset.tab).classList.add('active');
+      if(t.dataset.tab==='saved')renderSaved();
+    });
+  });
+
+  function pt(a,r){const t=(a-90)*Math.PI/180;return [150+r*Math.cos(t),150+r*Math.sin(t)];}
+  function arc(start,end,r){let s=end-start;if(s<0)s+=360;const large=s>180?1:0;const[x1,y1]=pt(start,r),[x2,y2]=pt(end,r);return 'M '+x1.toFixed(1)+' '+y1.toFixed(1)+' A '+r+' '+r+' 0 '+large+' 1 '+x2.toFixed(1)+' '+y2.toFixed(1);}
+
+  function calcCam(){
+    const adv=num('adv');
+    const io=num('inOpen')+adv, ic=num('inClose')-adv;
+    const eo=num('exOpen')+adv, ec=num('exClose')-adv;
+    const durIn=num('inOpen')+180+num('inClose');
+    const durEx=num('exOpen')+180+num('exClose');
+    const lcIn=durIn/2-io, lcEx=durEx/2-ec;
+    const lsa=(lcIn+lcEx)/2, overlap=io+ec;
+    el('durIn').innerHTML=deg(durIn); el('durEx').innerHTML=deg(durEx);
+    el('lcIn').innerHTML=deg(lcIn); el('lcEx').innerHTML=deg(lcEx);
+    el('lsa').innerHTML=deg(lsa); el('overlap').innerHTML=deg(overlap);
+    let lv;
+    if(lsa<102)lv='<b>Rapat</b> - galak di putaran atas, power band sempit. <span class="badge warn">Racing</span>';
+    else if(lsa<=108)lv='<b>Ideal</b> - rentang 102-108&deg; seimbang untuk harian. <span class="badge ok">Aman</span>';
+    else lv='<b>Lebar</b> - torsi bawah penuh &amp; halus, respon atas melambat. <span class="badge warn">Touring</span>';
+    el('lsaVerdict').innerHTML=lv;
+    let ov;
+    if(overlap<35)ov='Kecil - idle halus, aman dari benturan klep.';
+    else if(overlap<=55)ov='Sedang - wajar untuk kem street/racing. <span class="badge ok">Aman</span>';
+    else ov='Besar - performa tinggi, <b>wajib cek clearance klep-piston</b>. <span class="badge warn">Awas</span>';
+    el('ovVerdict').innerHTML=ov;
+    const avg=(durIn+durEx)/2; let dn;
+    if(avg<240)dn='Durasi rata-rata '+f(avg)+'&deg; &rarr; <b>standar/harian</b>: torsi bawah kuat, irit.';
+    else if(avg<260)dn='Durasi rata-rata '+f(avg)+'&deg; &rarr; <b>harian-agresif</b>: dorongan menengah-atas, masih enak harian.';
+    else if(avg<275)dn='Durasi rata-rata '+f(avg)+'&deg; &rarr; <b>racing</b>: tenaga RPM tinggi, bawah mulai kosong.';
+    else dn='Durasi rata-rata '+f(avg)+'&deg; &rarr; <b>balap ekstrim</b>: butuh kompresi &amp; RPM tinggi.';
+    el('durNote').innerHTML=dn;
+    let an;
+    if(adv>0)an='Cam <b>dimajukan '+f(adv)+'&deg;</b> &rarr; menambah torsi &amp; respon putaran bawah. (Durasi, LSA &amp; overlap tetap, hanya timing bergeser.)';
+    else if(adv<0)an='Cam <b>dimundurkan '+f(-adv)+'&deg;</b> &rarr; menggeser tenaga ke putaran atas, bawah berkurang. (Durasi, LSA &amp; overlap tetap.)';
+    else an='Cam dipasang <b>lurus (straight up)</b>. Batas aman majuin umumnya &plusmn;4&deg;.';
+    el('advNote').innerHTML=an;
+    el('arcIn').setAttribute('d',arc(((360-io)%360+360)%360,((180+ic)%360+360)%360,120));
+    el('arcEx').setAttribute('d',arc(((180-eo)%360+360)%360,((ec)%360+360)%360,105));
+    el('wOverlap').textContent=f(overlap)+'\u00B0';
+    // label sudut di ujung arc
+    function plabel(id,ang,r){const e=el(id);if(!e)return;const[x,yy]=pt(((ang%360)+360)%360,r);e.setAttribute('x',x.toFixed(1));e.setAttribute('y',(yy+3).toFixed(1));}
+    plabel('lblInO',360-io,138); el('lblInO').textContent=f(io);
+    plabel('lblInC',180+ic,138); el('lblInC').textContent=f(ic);
+    plabel('lblExO',180-eo,98);  el('lblExO').textContent=f(eo);
+    plabel('lblExC',ec,98);      el('lblExC').textContent=f(ec);
+    pulse('lsa'); pulse('overlap');
+    validateCam(durIn,durEx,lsa,overlap,io,ic,eo,ec);
+  }
+
+  function validateCam(durIn,durEx,lsa,overlap,io,ic,eo,ec){
+    const w=[];
+    if(num('inOpen')<0||num('inClose')<0||num('exOpen')<0||num('exClose')<0)
+      w.push('Ada sudut klep bernilai negatif - cek lagi hasil dial.');
+    if(durIn<180||durEx<180)
+      w.push('Durasi di bawah 180\u00B0 - tidak wajar untuk mesin 4-tak.');
+    if(durIn>320||durEx>320)
+      w.push('Durasi di atas 320\u00B0 - sangat ekstrem, pastikan patokan ukur benar (1 mm).');
+    if(lsa<90||lsa>120)
+      w.push('LSA '+f(lsa)+'\u00B0 di luar rentang wajar (90-120\u00B0) - cek sudut buka/tutup.');
+    if(overlap<0)
+      w.push('Overlap negatif - kombinasi timing tidak mungkin, cek ulang.');
+    if(overlap>90)
+      w.push('Overlap '+f(overlap)+'\u00B0 sangat besar - risiko klep nabrak piston, wajib cek clearance.');
+    if(Math.abs(num('adv'))>10)
+      w.push('Geser cam '+f(num('adv'))+'\u00B0 terlalu jauh - umumnya batas aman \u00B14\u00B0.');
+    const box=el('warnBox');
+    if(w.length){
+      box.innerHTML='<span class="wt">\u26A0 Perlu Diperiksa</span><ul>'+w.map(x=>'<li>'+x+'</li>').join('')+'</ul>';
+      box.classList.add('show');
+    } else { box.classList.remove('show'); box.innerHTML=''; }
+  }
+  ['inOpen','inClose','exOpen','exClose','adv'].forEach(id=>el(id).addEventListener('input',calcCam));
+
+  function calcReverse(){
+    const di=num('rDurIn'),de=num('rDurEx'),lsa=num('rLsa');
+    const inOpen=di/2-lsa, inClose=di-180-inOpen;
+    const exClose=de/2-lsa, exOpen=de-180-exClose;
+    el('rInOpen').innerHTML=deg(inOpen); el('rInClose').innerHTML=deg(inClose);
+    el('rExOpen').innerHTML=deg(exOpen); el('rExClose').innerHTML=deg(exClose);
+    el('rOverlap').innerHTML=deg(inOpen+exClose);
+    const w=[];
+    if(di<180||de<180)w.push('Durasi di bawah 180\u00B0 - tidak wajar untuk mesin 4-tak.');
+    if(di>320||de>320)w.push('Durasi di atas 320\u00B0 - sangat ekstrem.');
+    if(lsa<90||lsa>120)w.push('LSA '+f(lsa)+'\u00B0 di luar rentang wajar (90-120\u00B0).');
+    if(inOpen<0||exOpen<0)w.push('Hasil sudut negatif - kombinasi durasi & LSA tidak realistis.');
+    const box=el('warnReverse');
+    if(box){
+      if(w.length){box.innerHTML='<span class="wt">\u26A0 Perlu Diperiksa</span><ul>'+w.map(x=>'<li>'+x+'</li>').join('')+'</ul>';box.classList.add('show');}
+      else{box.classList.remove('show');box.innerHTML='';}
+    }
+  }
+  ['rDurIn','rDurEx','rLsa'].forEach(id=>el(id).addEventListener('input',calcReverse));
+
+  function calcLift(){
+    const hasil=num('dur010')-num('liftDelta');
+    el('dur1mm').innerHTML=deg(hasil);
+    const w=[];
+    if(num('dur010')<=0)w.push('Masukkan durasi pada lift kecil dulu.');
+    if(num('liftDelta')<0)w.push('Selisih tidak boleh negatif.');
+    if(num('liftDelta')>60)w.push('Selisih '+f(num('liftDelta'))+'\u00B0 terlalu besar - umumnya 25-35\u00B0.');
+    if(hasil<0)w.push('Hasil durasi negatif - selisih melebihi durasi awal.');
+    const box=el('warnLift');
+    if(box){
+      if(w.length){box.innerHTML='<span class="wt">\u26A0 Perlu Diperiksa</span><ul>'+w.map(x=>'<li>'+x+'</li>').join('')+'</ul>';box.classList.add('show');}
+      else{box.classList.remove('show');box.innerHTML='';}
+    }
+  }
+  ['dur010','liftDelta'].forEach(id=>el(id).addEventListener('input',calcLift));
+
+  function calcEngine(){
+    const b=num('bore'),s=num('stroke'),n=num('cyl')||1;
+    const vd=(Math.PI/4)*b*b*s/1000, cc=vd*n;
+    el('cc').innerHTML=f(cc)+'<span class="deg"> cc</span>';
+    el('vd').innerHTML=f(vd)+'<span class="deg"> cc</span>';
+    const vc=num('vc'), cr=vc>0?(vd+vc)/vc:0;
+    el('cr').innerHTML=cr>0?f(cr)+'<span class="deg"> : 1</span>':'-';
+    let cv;
+    if(cr<=0)cv='';
+    else if(cr<10)cv='Rendah - aman Pertalite, tenaga kalem.';
+    else if(cr<11.5)cv='Sedang - minimal Pertamax (RON 92). <span class="badge ok">Umum</span>';
+    else if(cr<12.5)cv='Tinggi - wajib Pertamax Turbo/RON 98. <span class="badge warn">Awas</span>';
+    else cv='Sangat tinggi - bensin racing/oktan booster. <span class="badge warn">Balap</span>';
+    el('crVerdict').innerHTML=cv;
+
+    /* dinamis: volume efektif sejak klep masuk menutup (ABDC) */
+    const rl=num('rodLen'), ivc=num('ivc'), rc=s/2;
+    let dcr=0;
+    if(vc>0 && rl>0 && s>0 && b>0){
+      const th=(180+ivc)*Math.PI/180;
+      const x=rc*(1-Math.cos(th))+rl*(1-Math.sqrt(1-Math.pow(rc/rl*Math.sin(th),2)));
+      const veff=(Math.PI/4)*b*b*x/1000;
+      dcr=(vc+veff)/vc;
+    }
+    el('dcr').innerHTML=dcr>0?f(dcr)+'<span class="deg"> : 1</span>':'-';
+    let dv;
+    if(dcr<=0)dv='';
+    else if(dcr<7.5)dv='Rendah - aman oktan rendah, tenaga kalem.';
+    else if(dcr<8.2)dv='Ideal - cocok Pertalite/Pertamax, aman dari ngelitik. <span class="badge ok">Optimal</span>';
+    else if(dcr<8.8)dv='Agak tinggi - sebaiknya Pertamax (RON 92+). <span class="badge warn">Awas</span>';
+    else dv='Tinggi - butuh RON 98+ / bensin racing agar tidak ngelitik. <span class="badge warn">Balap</span>';
+    el('dcrVerdict').innerHTML=dv;
+    pulse('cr'); pulse('dcr');
+
+    const tcr=num('targetCr');
+    el('needVc').innerHTML=tcr>1?f(vd/(tcr-1))+'<span class="deg"> cc</span>':'-';
+    const we=[];
+    if(b>0&&stroke>0){
+      if(b<20||b>120)we.push('Bore '+f(b)+' mm di luar wajar untuk motor.');
+      if(stroke<20||stroke>120)we.push('Stroke '+f(stroke)+' mm di luar wajar untuk motor.');
+    }
+    if(vc>0&&vc<3)we.push('Vc '+f(vc)+' cc sangat kecil - kompresi bisa ekstrem, cek ukur.');
+    if(cr>14)we.push('Kompresi statis '+f(cr)+':1 terlalu tinggi - butuh bensin oktan sangat tinggi / risiko detonasi.');
+    if(rl>0&&stroke>0&&rl<stroke/2)we.push('Panjang stang ('+f(rl)+' mm) lebih pendek dari radius kruk as - tidak mungkin secara mekanis.');
+    const box=el('warnEngine');
+    if(box){
+      if(we.length){box.innerHTML='<span class="wt">\u26A0 Perlu Diperiksa</span><ul>'+we.map(x=>'<li>'+x+'</li>').join('')+'</ul>';box.classList.add('show');}
+      else{box.classList.remove('show');box.innerHTML='';}
+    }
+  }
+  ['bore','stroke','cyl','vc','rodLen','ivc','targetCr'].forEach(id=>el(id).addEventListener('input',calcEngine));
+
+  el('custDate').value=new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
+
+  el('saveBtn').addEventListener('click',()=>{
+    const p=v=>{const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?0:n;};
+    const rec={
+      id:Date.now(),
+      name:el('custName').value.trim()||'Tanpa nama',
+      date:el('custDate').value,
+      inOpen:el('inOpen').value,inClose:el('inClose').value,
+      exOpen:el('exOpen').value,exClose:el('exClose').value,
+      adv:el('adv').value,
+      bore:el('bore').value,stroke:el('stroke').value,cyl:el('cyl').value,
+      vc:el('vc').value,rodLen:el('rodLen').value,ivc:el('ivc').value,
+      targetCr:el('targetCr').value,
+      notes:el('notesText').value
+    };
+    const adv=p(rec.adv);
+    const io=p(rec.inOpen)+adv, ic=p(rec.inClose)-adv, eo=p(rec.exOpen)+adv, ec=p(rec.exClose)-adv;
+    const durIn=p(rec.inOpen)+180+p(rec.inClose);
+    const durEx=p(rec.exOpen)+180+p(rec.exClose);
+    rec.durIn=f(durIn); rec.durEx=f(durEx);
+    rec.lsa=f(((durIn/2-io)+(durEx/2-ec))/2);
+    rec.overlap=f(io+ec); rec.advF=f(adv);
+    // cek apakah sedang edit spek yang sudah ada (nama sama) -> timpa
+    const existIdx=cams.findIndex(x=>x.name.toLowerCase()===rec.name.toLowerCase());
+    let updated=false;
+    if(existIdx>=0){
+      rec.id=cams[existIdx].id;          // pertahankan id lama
+      cams.splice(existIdx,1);           // buang yg lama
+      updated=true;
+    }
+    cams.unshift(rec);                   // taruh paling atas
+    saveCams();
+    editingId=rec.id;
+    el('saveBtn').textContent=updated?'\u2713 Diperbarui':'\u2713 Tersimpan';
+    setTimeout(()=>el('saveBtn').innerHTML='&#128190; Simpan Spek',1500);
+  });
+
+  function renderSaved(){
+    const box=el('savedList');
+    const q=(el('searchBox')?el('searchBox').value.trim().toLowerCase():'');
+    el('searchClear').style.display=q?'':'none';
+    if(!cams.length){el('searchCount').textContent='';box.innerHTML='<div class="empty">Belum ada spek tersimpan.<br>Simpan dari tab Noken As untuk membandingkan.<br><br><small>Ketuk kartu untuk lihat detail &amp; muat ulang.</small></div>';return;}
+    const list=q?cams.filter(r=>r.name.toLowerCase().includes(q)||(r.notes||'').toLowerCase().includes(q)):cams;
+    el('searchCount').textContent=q?(list.length+' dari '+cams.length+' spek'):(cams.length+' spek tersimpan');
+    if(!list.length){box.innerHTML='<div class="empty">Tidak ada hasil untuk "'+q+'".</div>';return;}
+    box.innerHTML=list.map(r=>'<div class="saved'+(compareMode?' selectable':'')+(cmpPick.includes(String(r.id))?' picked':'')+'" data-open="'+r.id+'"><span class="chk"></span><div class="top"><div><div class="name">'+r.name+'</div><div class="date">'+r.date+(r.advF!=0?' &middot; cam '+(r.advF>0?'+':'')+r.advF+'&deg;':'')+'</div></div><div class="card-btns"><button class="edit" data-edit="'+r.id+'">Edit</button><button class="del" data-id="'+r.id+'">Hapus</button></div></div><div class="specs"><div><em>Durasi IN</em>'+r.durIn+'&deg;</div><div><em>Durasi EX</em>'+r.durEx+'&deg;</div><div><em>LSA</em>'+r.lsa+'&deg;</div><div><em>Overlap</em>'+r.overlap+'&deg;</div></div><div class="tap-hint">Ketuk untuk detail &amp; muat ulang &rarr;</div></div>').join('');
+    box.querySelectorAll('.del').forEach(b=>b.addEventListener('click',(e)=>{e.stopPropagation();askDelete(b.dataset.id);}));
+    box.querySelectorAll('.edit').forEach(b=>b.addEventListener('click',(e)=>{e.stopPropagation();openEdit(b.dataset.edit);}));
+    box.querySelectorAll('[data-open]').forEach(c=>c.addEventListener('click',()=>{
+      if(compareMode){togglePick(c.dataset.open);}
+      else{openSavedDetail(c.dataset.open);}
+    }));
+  }
+
+  function summaryFromRecord(r){
+    const p=v=>{const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?0:n;};
+    const D='\u00B0';
+    const adv=p(r.adv);
+    const inO=p(r.inOpen),inC=p(r.inClose),exO=p(r.exOpen),exC=p(r.exClose);
+    const io=inO+adv,ic=inC-adv,eo=exO+adv,ec=exC-adv;
+    const durIn=inO+180+inC,durEx=exO+180+exC;
+    const lcIn=durIn/2-io,lcEx=durEx/2-ec;
+    const lsa=f((lcIn+lcEx)/2),overlap=f(io+ec);
+    const bore=p(r.bore),stroke=p(r.stroke),cyl=p(r.cyl)||1;
+    const vd=(Math.PI/4)*bore*bore*stroke/1000,cc=vd*cyl,vc=p(r.vc);
+    const cr=vc>0?(vd+vc)/vc:0;
+    const rl=p(r.rodLen),ivc=p(r.ivc),rcc=stroke/2;
+    let dcr=0;
+    if(vc>0&&rl>0&&stroke>0&&bore>0){const th=(180+ivc)*Math.PI/180;const x=rcc*(1-Math.cos(th))+rl*(1-Math.sqrt(1-Math.pow(rcc/rl*Math.sin(th),2)));dcr=(vc+(Math.PI/4)*bore*bore*x/1000)/vc;}
+    return ['===== BONSKY GARAGE =====','Motor   : '+r.name,'Tanggal : '+r.date,'',
+      '-- TIMING NOKEN AS --',
+      'IN Buka   : '+f(io)+D+' BTDC','IN Tutup  : '+f(ic)+D+' ABDC',
+      'EX Buka   : '+f(eo)+D+' BBDC','EX Tutup  : '+f(ec)+D+' ATDC',
+      'Durasi IN : '+f(durIn)+D,'Durasi EX : '+f(durEx)+D,
+      'LC IN     : '+f(lcIn)+D,'LC EX     : '+f(lcEx)+D,
+      'LSA       : '+lsa+D,'Overlap   : '+overlap+D,
+      'Advance   : '+(adv>0?'+':'')+f(adv)+D+' cam','',
+      '-- SPEK MESIN --',
+      'Bore      : '+f(bore)+' mm','Stroke    : '+f(stroke)+' mm','Silinder  : '+cyl,
+      'Kapasitas : '+f(cc)+' cc','Vc        : '+f(vc)+' cc',
+      'SCR       : '+(cr>0?f(cr)+' : 1':'-'),'DCR       : '+(dcr>0?f(dcr)+' : 1':'-'),'',
+      '-- CATATAN --',(r.notes&&r.notes.trim()?r.notes.trim():'-'),'',
+      '========================='].join('\n');
+  }
+
+  function applyTheme(t){
+    if(t==='light'){document.body.classList.add('light');el('themeToggle').innerHTML='\u263E';}
+    else{document.body.classList.remove('light');el('themeToggle').innerHTML='\u2600';}
+  }
+  function toggleTheme(){
+    const cur=document.body.classList.contains('light')?'light':'dark';
+    const next=cur==='light'?'dark':'light';
+    applyTheme(next); store_set('theme',next);
+  }
+
+  function clearSearch(){el('searchBox').value='';renderSaved();}
+
+  let compareMode=false, cmpPick=[];
+
+  function toggleCompare(){
+    compareMode=!compareMode; cmpPick=[];
+    el('cmpToggle').classList.toggle('active',compareMode);
+    el('cmpHint').style.display=compareMode?'':'none';
+    el('cmpGo').style.display=compareMode?'':'none';
+    el('cmpGo').classList.remove('ready');
+    renderSaved();
+  }
+  function togglePick(id){
+    id=String(id);
+    const i=cmpPick.indexOf(id);
+    if(i>=0)cmpPick.splice(i,1);
+    else{ if(cmpPick.length>=2)cmpPick.shift(); cmpPick.push(id); }
+    el('cmpGo').classList.toggle('ready',cmpPick.length===2);
+    el('cmpHint').textContent=cmpPick.length===2?'2 spek terpilih':'Pilih '+(2-cmpPick.length)+' spek lagi';
+    renderSaved();
+  }
+
+  function cmpVal(r,key){const v=parseFloat(String(r[key]).replace(',','.'));return isNaN(v)?0:v;}
+  function cmpEngine(r){
+    const p=v=>{const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?0:n;};
+    const bore=p(r.bore),stroke=p(r.stroke),cyl=p(r.cyl)||1,vc=p(r.vc);
+    const vd=(Math.PI/4)*bore*bore*stroke/1000,cc=vd*cyl;
+    const cr=vc>0?(vd+vc)/vc:0;
+    const rl=p(r.rodLen),ivc=p(r.ivc),rcc=stroke/2;
+    let dcr=0;
+    if(vc>0&&rl>0&&stroke>0&&bore>0){const th=(180+ivc)*Math.PI/180;const x=rcc*(1-Math.cos(th))+rl*(1-Math.sqrt(1-Math.pow(rcc/rl*Math.sin(th),2)));dcr=(vc+(Math.PI/4)*bore*bore*x/1000)/vc;}
+    return {cc:cc,cr:cr,dcr:dcr};
+  }
+
+  let cmpText='';
+  function showCompare(){
+    if(cmpPick.length!==2)return;
+    const a=cams.find(x=>String(x.id)===cmpPick[0]);
+    const b=cams.find(x=>String(x.id)===cmpPick[1]);
+    if(!a||!b)return;
+    const ea=cmpEngine(a), eb=cmpEngine(b);
+    const rows=[
+      ['sec','TIMING NOKEN AS'],
+      ['Durasi IN', cmpVal(a,'durIn'), cmpVal(b,'durIn'),'\u00B0'],
+      ['Durasi EX', cmpVal(a,'durEx'), cmpVal(b,'durEx'),'\u00B0'],
+      ['LSA', cmpVal(a,'lsa'), cmpVal(b,'lsa'),'\u00B0'],
+      ['Overlap', cmpVal(a,'overlap'), cmpVal(b,'overlap'),'\u00B0'],
+      ['Advance', cmpVal(a,'advF'), cmpVal(b,'advF'),'\u00B0'],
+      ['sec','SPEK MESIN'],
+      ['Kapasitas', ea.cc, eb.cc,' cc'],
+      ['Kompresi (SCR)', ea.cr, eb.cr,''],
+      ['Kompresi (DCR)', ea.dcr, eb.dcr,''],
+    ];
+    let html='<table class="cmp-table"><thead><tr><th></th><th>'+esc(a.name)+'</th><th>'+esc(b.name)+'</th><th>Selisih</th></tr></thead><tbody>';
+    let txt='PERBANDINGAN SPEK\n'+a.name+'  vs  '+b.name+'\n\n';
+    rows.forEach(row=>{
+      if(row[0]==='sec'){html+='<tr><td class="sec" colspan="4">'+row[1]+'</td></tr>';txt+='-- '+row[1]+' --\n';return;}
+      const lbl=row[0],va=row[1],vb=row[2],u=row[3];
+      const d=vb-va;
+      const cls=Math.abs(d)<0.05?'cmp-eq':(d>0?'cmp-up':'cmp-dn');
+      const ds=(Math.abs(d)<0.05?'0':(d>0?'+':'')+f(d))+u;
+      html+='<tr><td>'+lbl+'</td><td>'+f(va)+u+'</td><td>'+f(vb)+u+'</td><td class="'+cls+'">'+ds+'</td></tr>';
+      txt+=lbl.padEnd(16)+': '+f(va)+u+'  ->  '+f(vb)+u+'  ('+ds+')\n';
+    });
+    html+='</tbody></table>';
+    el('cmpResult').innerHTML=html;
+    cmpText=txt;
+    el('cmpBg').classList.add('show');
+  }
+  function closeCompare(){el('cmpBg').classList.remove('show');}
+  function cmpCopy(){
+    const btn=el('cmpCopyBtn');
+    if(window.Android&&typeof Android.shareText==='function'){Android.shareText(cmpText);return;}
+    if(navigator.share&&window===window.top){navigator.share({title:'Bonsky Garage',text:cmpText}).catch(function(){});return;}
+    try{navigator.clipboard.writeText(cmpText);}catch(e){}
+    btn.textContent='\u2713 Tersalin';setTimeout(()=>btn.innerHTML='&#128203; Salin',1500);
+  }
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  let pendingLoadId=null;
+  let editRecId=null, delRecId=null;
+
+  function openEdit(id){
+    const r=cams.find(x=>x.id==id); if(!r)return;
+    editRecId=id;
+    el('editName').value=r.name||'';
+    el('editNotes').value=r.notes||'';
+    el('editBg').classList.add('show');
+  }
+  function closeEdit(){el('editBg').classList.remove('show');}
+  function saveEdit(){
+    const r=cams.find(x=>x.id==editRecId); if(!r){closeEdit();return;}
+    const newName=el('editName').value.trim()||'Tanpa nama';
+    r.name=newName; r.notes=el('editNotes').value;
+    saveCams(); renderSaved(); closeEdit();
+  }
+
+  function askDelete(id){
+    const r=cams.find(x=>x.id==id); if(!r)return;
+    delRecId=id;
+    el('confirmMsg').innerHTML='Yakin mau menghapus spek <b>'+r.name+'</b> ('+r.date+')?<br>Tindakan ini tidak bisa dibatalkan.';
+    el('confirmBg').classList.add('show');
+  }
+  function closeConfirm(){el('confirmBg').classList.remove('show');}
+  el('confirmYes')&&el('confirmYes').addEventListener('click',function(){
+    cams=cams.filter(x=>x.id!=delRecId); saveCams(); renderSaved(); closeConfirm();
+  });
+
+  function openSavedDetail(id){
+    const r=cams.find(x=>x.id==id); if(!r)return;
+    pendingLoadId=id;
+    el('modalTitle').textContent=r.name;
+    el('modalText').value=summaryFromRecord(r);
+    el('modalPrintBtn').style.display='none';
+    el('modalLoadBtn').style.display='';
+    el('modalBg').classList.add('show');
+  }
+
+  function loadSaved(){
+    const r=cams.find(x=>x.id==pendingLoadId); if(!r)return;
+    editingId=r.id;
+    el('custName').value=r.name||'';
+    if(r.date)el('custDate').value=r.date;
+    ['inOpen','inClose','exOpen','exClose','adv','bore','stroke','cyl','vc','rodLen','ivc','targetCr'].forEach(k=>{if(r[k]!==undefined&&r[k]!=='')el(k).value=r[k];});
+    el('notesText').value=r.notes||'';
+    restoreForm();
+  applyTheme(store_get('theme','dark'));
+  document.addEventListener('input',function(){saveForm();});
+  calcCam();calcReverse();calcLift();calcEngine();nUpdate();
+    closeModal();
+    document.querySelector('.navbtn[data-tab="cam"]').click();
+    window.scrollTo(0,0);
+  }
+
+  /* export functions */
+  function generateSummary(){
+    const adv=num('adv');
+    const inO=num('inOpen'),inC=num('inClose'),exO=num('exOpen'),exC=num('exClose');
+    const io=inO+adv, ic=inC-adv, eo=exO+adv, ec=exC-adv;
+    const durIn=inO+180+inC;
+    const durEx=exO+180+exC;
+    const lcIn=durIn/2-io, lcEx=durEx/2-ec;
+    const lsa=f((lcIn+lcEx)/2), overlap=f(io+ec);
+    const name=el('custName').value.trim()||'Tanpa nama';
+    const date=el('custDate').value;
+    const bore=num('bore'),stroke=num('stroke'),cyl=num('cyl')||1;
+    const vc=num('vc'),tcr=num('targetCr');
+    const cc=el('cc').innerText, vd=el('vd').innerText;
+    const cr=el('cr').innerText, dcr=el('dcr').innerText, needVc=el('needVc').innerText;
+    const notes=el('notesText').value.trim()||'-';
+    const avg=(durIn+durEx)/2;
+    let kat='standar/harian';
+    if(avg>=240&&avg<260)kat='harian-agresif';
+    else if(avg>=260&&avg<275)kat='racing';
+    else if(avg>=275)kat='balap ekstrim';
+    return [
+      '===== BONSKY GARAGE =====',
+      'Performance - Tuning - Engine Builder',
+      '',
+      'Motor   : '+name,
+      'Tanggal : '+date,
+      '',
+      '-- TIMING NOKEN AS --',
+      'IN Buka   : '+f(io)+'° BTDC',
+      'IN Tutup  : '+f(ic)+'° ABDC',
+      'EX Buka   : '+f(eo)+'° BBDC',
+      'EX Tutup  : '+f(ec)+'° ATDC',
+      'Durasi IN : '+f(durIn)+'°',
+      'Durasi EX : '+f(durEx)+'°',
+      'LC IN     : '+f(lcIn)+'°',
+      'LC EX     : '+f(lcEx)+'°',
+      'LSA       : '+lsa+'°',
+      'Overlap   : '+overlap+'°',
+      'Advance   : '+(adv>0?'+':'')+f(adv)+'° cam',
+      'Kategori  : '+kat,
+      '',
+      '-- SPEK MESIN --',
+      'Bore            : '+f(bore)+' mm',
+      'Stroke          : '+f(stroke)+' mm',
+      'Silinder        : '+cyl,
+      'Vol/silinder    : '+vd,
+      'Kapasitas       : '+cc,
+      'Vc ruang bakar  : '+f(vc)+' cc',
+      'Kompresi Statis : '+cr,
+      'Kompresi Dinamis: '+dcr,
+      'Target CR       : '+f(tcr)+' : 1',
+      'Vc dibutuhkan   : '+needVc,
+      '',
+      '-- CATATAN --',
+      notes,
+      '',
+      '========================='
+    ].join('\n');
+  }
+
+  async function generatePDF(){
+    const btn=el('pdfBtn');
+    btn.textContent='Membuat PDF...'; btn.disabled=true;
+    try{
+      if(!window.jspdf){
+        await new Promise(function(res,rej){
+          const s=document.createElement('script');
+          s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+          s.onload=res; s.onerror=rej;
+          document.head.appendChild(s);
+        });
+      }
+    }catch(e){
+      btn.innerHTML='&#128438; Download PDF'; btn.disabled=false;
+      openModal('Preview / Cetak',generateSummary(),true); return;
+    }
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF('p','mm','a5');
+    const W=148,H=210;
+    const name=el('custName').value.trim()||'Tanpa nama';
+    const date=el('custDate').value;
+    const adv=num('adv');
+    const inO=num('inOpen'),inC=num('inClose'),exO=num('exOpen'),exC=num('exClose');
+    const io=inO+adv,ic=inC-adv,eo=exO+adv,ec=exC-adv;
+    const durIn=inO+180+inC,durEx=exO+180+exC;
+    const lcIn=durIn/2-io,lcEx=durEx/2-ec;
+    const lsa=(lcIn+lcEx)/2,overlap=io+ec;
+    const bore=num('bore'),stroke=num('stroke'),cyl=num('cyl')||1;
+    const vd=(Math.PI/4)*bore*bore*stroke/1000,cc=vd*cyl,vc=num('vc');
+    const cr=vc>0?(vd+vc)/vc:0;
+    const rl=num('rodLen'),ivc=num('ivc'),rc=stroke/2;
+    let dcr=0;
+    if(vc>0&&rl>0&&stroke>0&&bore>0){
+      const th=(180+ivc)*Math.PI/180;
+      const x=rc*(1-Math.cos(th))+rl*(1-Math.sqrt(1-Math.pow(rc/rl*Math.sin(th),2)));
+      dcr=(vc+(Math.PI/4)*bore*bore*x/1000)/vc;
+    }
+    const notes=el('notesText').value.trim();
+
+    /* --- HEADER --- */
+    doc.setFillColor(21,24,27); doc.rect(0,0,W,32,'F');
+    doc.setFillColor(245,166,35); doc.rect(0,0,W,3,'F');
+    doc.setFont('helvetica','bolditalic'); doc.setFontSize(26);
+    doc.setTextColor(242,244,245); doc.text('BONSKY',8,20);
+    const bw=doc.getTextWidth('BONSKY ');
+    doc.setTextColor(245,166,35); doc.text('GARAGE',8+bw,20);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    doc.setTextColor(134,147,160);
+    doc.text('Performance  \u00B7  Tuning  \u00B7  Engine Builder',8,27);
+    doc.text(date,W-8,27,{align:'right'});
+
+    /* --- SUB-HEADER --- */
+    doc.setFillColor(30,35,41); doc.rect(0,32,W,18,'F');
+    doc.setFillColor(245,166,35); doc.rect(0,32,3,18,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    doc.setTextColor(242,244,245); doc.text('LAPORAN TIMING NOKEN AS',8,42);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.setTextColor(134,147,160); doc.text('Motor: '+name,8,48);
+
+    let y=60;
+    function secTitle(t){
+      doc.setFont('helvetica','bold'); doc.setFontSize(9);
+      doc.setTextColor(245,166,35); doc.text(t,8,y);
+      doc.setDrawColor(245,166,35); doc.setLineWidth(0.3);
+      doc.line(8,y+1.5,W-8,y+1.5); y+=8;
+    }
+
+    /* --- TIMING TABLE --- */
+    secTitle('TIMING KLEP');
+    const c1=8,c2=58,c3=106,rh=7.5;
+    doc.setFillColor(30,35,41); doc.rect(c1,y-5,W-16,rh,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+    doc.setTextColor(134,147,160); doc.text('PARAMETER',c1+2,y);
+    doc.setTextColor(78,161,255); doc.text('INTAKE',c2+2,y);
+    doc.setTextColor(255,94,87); doc.text('EXHAUST',c3+2,y);
+    y+=rh;
+    const trows=[
+      ['Buka',f(inO)+'\u00B0 BTDC',f(exO)+'\u00B0 BBDC'],
+      ['Tutup',f(inC)+'\u00B0 ABDC',f(exC)+'\u00B0 ATDC'],
+      ['Durasi',f(durIn)+'\u00B0',f(durEx)+'\u00B0'],
+      ['Lobe Center',f(lcIn)+'\u00B0',f(lcEx)+'\u00B0'],
+    ];
+    trows.forEach(function(row,i){
+      if(i%2===0){doc.setFillColor(25,29,33);doc.rect(c1,y-5,W-16,rh,'F');}
+      doc.setFont('helvetica','normal');doc.setFontSize(8);
+      doc.setTextColor(134,147,160);doc.text(row[0],c1+2,y);
+      doc.setTextColor(78,161,255);doc.text(row[1],c2+2,y);
+      doc.setTextColor(255,94,87);doc.text(row[2],c3+2,y);
+      y+=rh;
+    });
+    y+=1;
+    doc.setFillColor(21,24,27);doc.rect(c1,y-5,W-16,10,'F');
+    doc.setFillColor(245,166,35);doc.rect(c1,y-5,2.5,10,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(9);
+    doc.setTextColor(245,166,35);doc.text('LSA: '+f(lsa)+'\u00B0',c1+5,y+2);
+    doc.setTextColor(242,244,245);doc.text('Overlap: '+f(overlap)+'\u00B0',c2+2,y+2);
+    doc.setTextColor(134,147,160);doc.text('Advance: '+(adv>=0?'+':'')+f(adv)+'\u00B0',c3+2,y+2);
+    y+=15;
+
+    /* --- MESIN --- */
+    secTitle('SPEK MESIN');
+    const bxW=(W-20)/3;
+    const eData=[
+      ['Bore',f(bore)+' mm'],['Stroke',f(stroke)+' mm'],['Kapasitas',f(cc)+' cc'],
+      ['Ruang Bakar (Vc)',f(vc)+' cc'],['SCR',cr>0?f(cr)+' : 1':'-'],['DCR',dcr>0?f(dcr)+' : 1':'-'],
+    ];
+    let bx=8,by=y;
+    eData.forEach(function(d,i){
+      doc.setFillColor(30,35,41);doc.rect(bx,by-4,bxW-2,15,'F');
+      doc.setFont('helvetica','normal');doc.setFontSize(6.5);
+      doc.setTextColor(134,147,160);doc.text(d[0].toUpperCase(),bx+2.5,by+1);
+      doc.setFont('helvetica','bold');doc.setFontSize(10);
+      doc.setTextColor(242,244,245);doc.text(d[1],bx+2.5,by+9);
+      bx+=bxW;
+      if((i+1)%3===0){bx=8;by+=18;}
+    });
+    y=by+8;
+
+    /* --- CATATAN --- */
+    if(notes){
+      secTitle('CATATAN');
+      const lines=doc.splitTextToSize(notes,W-22);
+      const nh=lines.length*5+8;
+      doc.setFillColor(30,35,41);doc.rect(8,y-4,W-16,nh,'F');
+      doc.setFont('helvetica','normal');doc.setFontSize(8);
+      doc.setTextColor(242,244,245);doc.text(lines,11,y+1);
+      y+=nh+4;
+    }
+
+    /* --- FOOTER --- */
+    doc.setFillColor(21,24,27);doc.rect(0,H-12,W,12,'F');
+    doc.setFillColor(245,166,35);doc.rect(0,H-12,W,1,'F');
+    doc.setFont('helvetica','normal');doc.setFontSize(7);
+    doc.setTextColor(134,147,160);
+    doc.text('Bonsky Garage  \u00B7  Performance \u00B7 Tuning \u00B7 Engine Builder',W/2,H-5,{align:'center'});
+
+    /* --- SAVE / SHARE --- */
+    const fname='BonskyGarage-'+name.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'')+'.pdf';
+    if(window.Android && typeof Android.openPDF==='function'){
+      Android.openPDF(doc.output('datauristring'),fname);
+    } else {
+      let ok=false;
+      try{
+        const blob=doc.output('blob');
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url; a.download=fname;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a);
+        const w=window.open(url,'_blank');
+        ok=true;
+        setTimeout(function(){URL.revokeObjectURL(url);},5000);
+      }catch(e){}
+      if(!ok){
+        openModal('PDF Tidak Bisa Diunduh Di Sini','Tampilan preview ini memblokir unduhan file.\n\nBuka tool ini langsung di browser HP (Chrome/Safari) untuk download PDF, atau pakai versi APK.\n\nSementara, ini ringkasan teksnya:\n\n'+generateSummary(),false);
+      }
+    }
+    btn.innerHTML='&#128438; Download PDF'; btn.disabled=false;
+  }
+
+    function openModal(title, text, showPrint){
+    el('modalTitle').textContent=title;
+    el('modalText').value=text;
+    el('modalPrintBtn').style.display=showPrint?'':'none';
+    el('modalLoadBtn').style.display='none';
+    el('modalBg').classList.add('show');
+    setTimeout(function(){el('modalText').focus();},100);
+  }
+  function closeModal(){el('modalBg').classList.remove('show');}
+
+  function modalCopy(){
+    const ta=el('modalText'),btn=el('modalCopyBtn');
+    if(window.Android && typeof Android.shareText==='function'){Android.shareText(ta.value);return;}
+    if(navigator.share && window===window.top){navigator.share({title:'Bonsky Garage',text:ta.value}).catch(function(){});return;}
+    ta.select();ta.setSelectionRange(0,99999);
+    try{navigator.clipboard.writeText(ta.value).then(function(){});}catch(e){}
+    document.execCommand('copy');
+    btn.textContent='✓ Tersalin';
+    setTimeout(function(){btn.innerHTML='&#128203; Salin Teks';},1500);
+  }
+
+  function modalPrint(){
+    closeModal();
+    if(window.Android && typeof Android.printPage==='function'){Android.printPage();}
+    else{window.print();}
+  }
+
+  function doPrint(){
+    if(window.Android && typeof Android.printPage==='function'){Android.printPage();}
+    else if(window===window.top){window.print();}
+    else{openModal('Preview Cetak', generateSummary(), true);}
+  }
+
+  function doShare(){
+    const text=generateSummary();
+    if(window.Android && typeof Android.shareText==='function'){Android.shareText(text);}
+    else if(navigator.share && window===window.top){navigator.share({title:'Bonsky Garage',text:text}).catch(function(){openModal('Ringkasan & Bagikan',text,false);});}
+    else{openModal('Ringkasan & Bagikan',text,false);}
+  }
+
+  el('modalBg').addEventListener('click',function(e){if(e.target===this)closeModal();});
+  if(el('searchBox'))el('searchBox').addEventListener('input',renderSaved);
+  el('editBg').addEventListener('click',function(e){if(e.target===this)closeEdit();});
+  el('confirmBg').addEventListener('click',function(e){if(e.target===this)closeConfirm();});
+  el('cmpBg').addEventListener('click',function(e){if(e.target===this)closeCompare();});
+
+  /* notes drawer */
+  const nDrawer=el('notesDrawer'),nText=el('notesText'),nMeta=el('notesMeta');
+  el('notesHead').addEventListener('click',()=>nDrawer.classList.toggle('open'));
+  function nUpdate(){const len=nText.value.trim().length;nMeta.textContent=len?'('+len+' karakter)':'';}
+  nText.addEventListener('input',nUpdate);
+  el('notesClear').addEventListener('click',()=>{nText.value='';nUpdate();nText.focus();});
+  el('notesCopy').addEventListener('click',async()=>{
+    const btn=el('notesCopy');
+    try{await navigator.clipboard.writeText(nText.value);}catch(e){nText.select();document.execCommand&&document.execCommand('copy');}
+    btn.textContent='\u2713 Tersalin';setTimeout(()=>btn.textContent='Salin',1200);
+  });
+
+  restoreForm();
+  applyTheme(store_get('theme','dark'));
+  document.addEventListener('input',function(){saveForm();});
+  calcCam();calcReverse();calcLift();calcEngine();
+</script>
+</body>
+</html>
